@@ -1,99 +1,71 @@
 #include <iostream>
 #include <vector>
 #include <set>
-#include <algorithm>
+#include <map>
+#include <sstream>
 
 using namespace std;
 
-class Grafo {
-public:
-    int n; // Número de vértices
-    vector<string> vertices;
-    vector<vector<int>> adj; // Lista de adjacência
+map<string, vector<string>> grafo;
+set<vector<string>> ciclos;
 
-    Grafo(int numVertices) {
-        n = numVertices;
-        adj.resize(n);
-        vertices.resize(n);
-    }
+void buscarCiclos(string inicio, string atual, vector<string> caminho, set<string> visitados) {
+    caminho.push_back(atual);
+    visitados.insert(atual);
 
-    void adicionarAresta(int u, int v) {
-        adj[u].push_back(v);
-        adj[v].push_back(u); // Grafo não-direcionado
-    }
-
-    void encontrarCiclos() {
-        set<vector<int>> ciclos;
-        vector<int> perm(n);
-        for (int i = 0; i < n; i++) perm[i] = i;
-
-        do {
-            if (adj[perm[n-1]].end() != find(adj[perm[n-1]].begin(), adj[perm[n-1]].end(), perm[0])) {
-                bool cicloValido = true;
-                for (int i = 0; i < n - 1; i++) {
-                    if (find(adj[perm[i]].begin(), adj[perm[i]].end(), perm[i + 1]) == adj[perm[i]].end()) {
-                        cicloValido = false;
-                        break;
-                    }
-                }
-                if (cicloValido) {
-                    vector<int> ciclo = perm;
-                    sort(ciclo.begin(), ciclo.end());
-                    ciclos.insert(ciclo);
-                }
-            }
-        } while (next_permutation(perm.begin(), perm.end()));
-
-        cout << "Ciclos encontrados:" << endl;
-        for (auto ciclo : ciclos) {
-            for (int v : ciclo) cout << vertices[v] << " ";
-            cout << vertices[ciclo[0]] << endl; // Fechar o ciclo
+    for (string vizinho : grafo[atual]) {
+        if (vizinho == inicio && caminho.size() > 2) { 
+            // Encontramos um ciclo, adicionar ao conjunto de ciclos
+            ciclos.insert(caminho);
+        } 
+        else if (visitados.find(vizinho) == visitados.end()) { 
+            buscarCiclos(inicio, vizinho, caminho, visitados);
         }
     }
-};
+}
 
 int main() {
-    int numVertices;
-    cout << "Digite o número de vértices: ";
-    cin >> numVertices;
+    int n;
+    cout << "Digite o numero de vertices: ";
+    cin >> n;
 
-    Grafo grafo(numVertices);
-
-    cout << "Escreva o nome dos vértices:" << endl;
-    for (int i = 0; i < numVertices; i++) {
-        cin >> grafo.vertices[i];
+    vector<string> vertices(n);
+    cout << "Escreva o nome dos vertices: ";
+    for (int i = 0; i < n; i++) {
+        cin >> vertices[i];
     }
 
-    cin.ignore(); // Limpar buffer do teclado
-
-    for (int i = 0; i < numVertices; i++) {
-        cout << grafo.vertices[i] << " está ligado a quais? (Digite os nomes separados por espaço ou 0 para nenhum): ";
-        string linha;
-        getline(cin, linha);
-
-        if (linha != "0") {
-            vector<string> conexoes;
-            string nome;
-            for (char c : linha) {
-                if (c == ' ') {
-                    conexoes.push_back(nome);
-                    nome = "";
-                } else {
-                    nome += c;
-                }
-            }
-            if (!nome.empty()) conexoes.push_back(nome);
-
-            for (string conexao : conexoes) {
-                auto it = find(grafo.vertices.begin(), grafo.vertices.end(), conexao);
-                if (it != grafo.vertices.end()) {
-                    int j = distance(grafo.vertices.begin(), it);
-                    grafo.adicionarAresta(i, j);
-                }
+    // Entrada das arestas
+    for (const string& v : vertices) {
+        cout << "O vertice [" << v << "] esta ligado a quais vertices? (Digite 0 se nenhum, ou nomes separados por espaco): ";
+        string conexoes;
+        cin.ignore();
+        getline(cin, conexoes);
+        
+        if (conexoes != "0") {
+            stringstream ss(conexoes);
+            string vizinho;
+            while (ss >> vizinho) {
+                grafo[v].push_back(vizinho);
             }
         }
     }
 
-    grafo.encontrarCiclos();
+    // Encontrar ciclos para cada vértice
+    for (const string& v : vertices) {
+        vector<string> caminho;
+        set<string> visitados;
+        buscarCiclos(v, v, caminho, visitados);
+    }
+
+    // Exibir ciclos encontrados
+    cout << "\nCiclos encontrados:\n";
+    for (const auto& ciclo : ciclos) {
+        for (const string& v : ciclo) {
+            cout << v << " ";
+        }
+        cout << endl;
+    }
+    cout << "Total de ciclos: " << ciclos.size() << endl;
     return 0;
 }
